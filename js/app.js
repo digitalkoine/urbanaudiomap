@@ -21,7 +21,10 @@ const legend = L.control({ position: "topright" });
 legend.onAdd = function () {
   const div = L.DomUtil.create("div", "legend");
   div.innerHTML = `
-    <h4>Audio sources</h4>
+    <div class="legend-header">
+      <h4>Audio sources</h4>
+      <button id="legendToggle" class="legend-toggle" type="button" aria-expanded="true" title="Hide/Show legend">Hide</button>
+    </div>
     <div id="legend-items"></div>
     <div class="footer">
       <b>Tip:</b> click on the map to simulate your position.<br/>
@@ -33,6 +36,27 @@ legend.onAdd = function () {
   return div;
 };
 legend.addTo(map);
+
+function setLegendCollapsed(isCollapsed) {
+  const el = document.querySelector(".legend");
+  const btn = document.getElementById("legendToggle");
+  if (!el || !btn) return;
+  el.classList.toggle("collapsed", isCollapsed);
+  btn.textContent = isCollapsed ? "Show" : "Hide";
+  btn.setAttribute("aria-expanded", String(!isCollapsed));
+}
+
+function wireLegendToggle() {
+  const btn = document.getElementById("legendToggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const el = document.querySelector(".legend");
+    const collapsed = el && el.classList.contains("collapsed");
+    setLegendCollapsed(!collapsed);
+  });
+}
+
+wireLegendToggle();
 
 function renderLegend(rowsHtml) {
   const el = document.getElementById("legend-items");
@@ -52,6 +76,18 @@ function makeIcon(emoji) {
 let audioCtx = null;
 let usingGPS = false;
 
+function safeNumber(x, fallback) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function safeVolume(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+
 function setStatus(text) {
   const el = document.getElementById("status");
   if (el) el.textContent = text;
@@ -62,16 +98,35 @@ function setStatus(text) {
  * volume=1 within minD, volume=0 from maxD onwards.
  */
 function attenuation(d, minD, maxD, exponent = 1.8) {
+  d = safeNumber(d, Infinity);
+  minD = safeNumber(minD, 0);
+  maxD = safeNumber(maxD, 0);
+  exponent = safeNumber(exponent, 1.8);
+
+  if (!Number.isFinite(d)) return 0;
+  if (maxD <= minD) return 0;
+
   if (d <= minD) return 1;
   if (d >= maxD) return 0;
+
   const t = (d - minD) / (maxD - minD);
-  return Math.pow(1 - t, exponent);
+  return safeVolume(Math.pow(1 - t, exponent));
 }
 
 function smoothGain(gainNode, target) {
   const now = audioCtx.currentTime;
+  const t = safeVolume(target);
+
   gainNode.gain.cancelScheduledValues(now);
-  gainNode.gain.setTargetAtTime(target, now, 0.12);
+
+  // Snap to 0 to avoid "ghost audio" if something went wrong upstream.
+  if (t <= 0.001) {
+    gainNode.gain.setValueAtTime(0, now);
+    return;
+  }
+
+  // Smooth ramp (no clicks)
+  gainNode.gain.setTargetAtTime(t, now, 0.12);
 }
 
 function updateCircleStyle(source, vol) {
@@ -130,7 +185,7 @@ function initScene(sources) {
     let legendRows = "";
 
     for (const s of sources) {
-      const d = userPos.distanceTo(s.latlng);
+      const d = safeNumber(userPos.distanceTo(s.latlng), Infinity);
       const vol = attenuation(d, s.minD, s.maxD, s.exponent);
 
       if (vol > 0.02) audibleCount++;
