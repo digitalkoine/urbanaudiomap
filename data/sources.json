@@ -1,0 +1,100 @@
+{
+  "sources": [
+    {
+      "id": "siren",
+      "label": "Siren",
+      "lat": 48.8572,
+      "lng": 2.3515,
+      "minD": 20,
+      "maxD": 300,
+      "exponent": 2.0,
+      "fillColor": "#e11d48",
+      "icon": "🚨",
+      "audio": "data/audio/siren.wav"
+    },
+    {
+      "id": "traffic",
+      "label": "Traffic",
+      "lat": 48.8558,
+      "lng": 2.3532,
+      "minD": 10,
+      "maxD": 180,
+      "exponent": 1.6,
+      "fillColor": "#64748b",
+      "icon": "🚗",
+      "audio": "data/audio/traffic.wav"
+    },
+    {
+      "id": "protest",
+      "label": "Protest",
+      "lat": 48.8589,
+      "lng": 2.3499,
+      "minD": 20,
+      "maxD": 220,
+      "exponent": 1.7,
+      "fillColor": "#7c3aed",
+      "icon": "✊",
+      "audio": "data/audio/protest.wav"
+    },
+    {
+      "id": "concert_far",
+      "label": "Concert (far)",
+      "lat": 48.8685,
+      "lng": 2.32,
+      "minD": 35,
+      "maxD": 450,
+      "exponent": 2.2,
+      "fillColor": "#2563eb",
+      "icon": "🎵",
+      "audio": "data/audio/concert.wav"
+    },
+    {
+      "id": "roadworks",
+      "label": "Roadworks",
+      "lat": 48.8528,
+      "lng": 2.3625,
+      "minD": 12,
+      "maxD": 160,
+      "exponent": 1.9,
+      "fillColor": "#f59e0b",
+      "icon": "🚧",
+      "audio": "data/audio/roadworks.wav"
+    },
+    {
+      "id": "rock",
+      "label": "Rock concert (minimal overlap)",
+      "lat": 48.844,
+      "lng": 2.28,
+      "minD": 20,
+      "maxD": 140,
+      "exponent": 2.3,
+      "fillColor": "#16a34a",
+      "icon": "🤘",
+      "audio": "data/audio/rock_concert.wav"
+    },
+    {
+      "id": "roadworks_center",
+      "label": "Roadworks (overlapping the main cluster)",
+      "lat": 48.8565,
+      "lng": 2.3508,
+      "minD": 10,
+      "maxD": 180,
+      "exponent": 1.9,
+      "fillColor": "#d97706",
+      "icon": "🚧",
+      "audio": "data/audio/roadworks.wav"
+    },
+    {
+      "id": "roadworks_concert",
+      "label": "Roadworks (overlapping the far concert)",
+      "lat": 48.868,
+      "lng": 2.323,
+      "minD": 10,
+      "maxD": 170,
+      "exponent": 1.9,
+      "fillColor": "#b45309",
+      "icon": "🚧",
+      "audio": "data/audio/roadworks.wav"
+    }
+  ]
+}
