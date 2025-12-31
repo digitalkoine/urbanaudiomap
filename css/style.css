@@ -10,7 +10,7 @@ header { padding: 12px 14px; border-bottom: 1px solid #eee; }
 button { padding: 10px 12px; border:1px solid #ccc; border-radius: 10px; background:#fff; cursor:pointer; }
 button:disabled { opacity:0.6; cursor:not-allowed; }
 #status { padding: 10px 14px; font-size: 14px; line-height: 1.35; white-space: pre-wrap; }
-.hint { color:#444; }
+.note { color:#444; font-size: 12px; }
 code { background: #f6f6f6; padding: 2px 6px; border-radius: 8px; }
 
 .legend {
@@ -21,33 +21,6 @@ code { background: #f6f6f6; padding: 2px 6px; border-radius: 8px; }
   padding: 10px 12px;
   min-width: 280px;
 }
-.legend h4 { margin: 0 0 8px 0; font-size: 14px; font-weight: 650; }
-.legend .item { display:flex; gap:8px; align-items:flex-start; margin: 6px 0; }
-.swatch { width: 12px; height: 12px; border-radius: 4px; margin-top: 2px; flex: 0 0 auto; border: 1px solid rgba(0,0,0,0.15); }
-.legend .meta { font-size: 12px; color: #222; }
-.legend .meta small { display:block; color:#555; }
-.legend .footer { margin-top: 8px; font-size: 12px; color:#444; }
-
-.icon-badge{
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 2px solid rgba(255,255,255,0.9);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: rgba(255,255,255,0.92);
-  font-size: 16px;
-  line-height: 1;
-}
-.icon-badge span{ transform: translateY(-0.5px); }
-
-.note{
-  font-size: 12px;
-  color: #444;
-}
-
 .legend-header{
   display:flex;
   align-items:center;
@@ -70,9 +43,26 @@ code { background: #f6f6f6; padding: 2px 6px; border-radius: 8px; }
 }
 .legend-toggle:active{ transform: translateY(0.5px); }
 .legend.collapsed #legend-items,
-.legend.collapsed .footer{
-  display:none;
+.legend.collapsed .footer{ display:none; }
+.legend.collapsed{ min-width: unset; }
+
+.legend .item { display:flex; gap:8px; align-items:flex-start; margin: 6px 0; }
+.swatch { width: 12px; height: 12px; border-radius: 4px; margin-top: 2px; flex: 0 0 auto; border: 1px solid rgba(0,0,0,0.15); }
+.legend .meta { font-size: 12px; color: #222; }
+.legend .meta small { display:block; color:#555; }
+.legend .footer { margin-top: 8px; font-size: 12px; color:#444; }
+
+.icon-badge{
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,0.92);
+  font-size: 16px;
+  line-height: 1;
 }
-.legend.collapsed{
-  min-width: unset;
-}
+.icon-badge span{ transform: translateY(-0.5px); }
