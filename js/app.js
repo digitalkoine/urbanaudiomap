@@ -88,6 +88,46 @@ function safeVolume(v) {
 }
 
 
+
+function dataUriToArrayBuffer(dataUri) {
+  // Supports: data:audio/wav;base64,....
+  const comma = dataUri.indexOf(",");
+  if (comma === -1) throw new Error("Invalid data URI (no comma).");
+  const meta = dataUri.slice(0, comma);
+  const data = dataUri.slice(comma + 1);
+
+  // If it's base64, decode; otherwise treat as URI-encoded.
+  const isBase64 = /;base64/i.test(meta);
+  if (!isBase64) {
+    // Rare in our project, but keep for completeness
+    const decoded = decodeURIComponent(data);
+    const buf = new ArrayBuffer(decoded.length);
+    const arr = new Uint8Array(buf);
+    for (let i = 0; i < decoded.length; i++) arr[i] = decoded.charCodeAt(i);
+    return buf;
+  }
+
+  const bin = atob(data);
+  const buf = new ArrayBuffer(bin.length);
+  const arr = new Uint8Array(buf);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+async function decodeToAudioBuffer(arrayBuf) {
+  return await new Promise((resolve, reject) => {
+    // iOS Safari prefers the callback form.
+    audioCtx.decodeAudioData(arrayBuf, resolve, reject);
+  });
+}
+
+function logStatus(line) {
+  // lightweight log into the status panel (useful on mobile)
+  const el = document.getElementById("status");
+  if (!el) return;
+  el.textContent = (el.textContent || "") + "\n" + line;
+}
+
 function setStatus(text) {
   const el = document.getElementById("status");
   if (el) el.textContent = text;
@@ -230,34 +270,33 @@ function initScene(sources) {
     }
 
     setStatus("Loading audio… (first time only)");
+    logStatus("AudioContext state: " + audioCtx.state);
 
-    // iOS Safari can block starting multiple <audio>.play() calls in one gesture.
-    // To be mobile-safe, we decode each embedded data: URI into an AudioBuffer and use BufferSourceNodes.
+    // Mobile-safe engine: decode embedded data: URIs into AudioBuffers (no fetch(data:) required).
     for (const s of sources) {
       // Gain per source (for distance-based volume)
       s.gainNode = audioCtx.createGain();
       s.gainNode.gain.value = 0;
       s.gainNode.connect(audioCtx.destination);
 
-      const resp = await fetch(s.audioUri);
-      const arrayBuf = await resp.arrayBuffer();
+      try {
+        const arrayBuf = dataUriToArrayBuffer(s.audioUri);
+        const audioBuf = await decodeToAudioBuffer(arrayBuf);
 
-      // decodeAudioData API differs slightly across browsers (promise vs callback)
-      const audioBuf = await new Promise((resolve, reject) => {
-        const p = audioCtx.decodeAudioData(arrayBuf, resolve, reject);
-        if (p && typeof p.then === "function") p.then(resolve).catch(reject);
-      });
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuf;
+        src.loop = true;
+        src.connect(s.gainNode);
+        src.start(0);
 
-      s.buffer = audioBuf;
-
-      const src = audioCtx.createBufferSource();
-      src.buffer = audioBuf;
-      src.loop = true;
-      src.connect(s.gainNode);
-      src.start(0);
-
-      s.sourceNode = src;
+        s.sourceNode = src;
+      } catch (e) {
+        logStatus("❌ Audio decode failed for " + s.label + ": " + e);
+        throw e;
+      }
     }
+
+    logStatus("✅ Audio loaded. Tap the map to simulate position.");
 
     // GPS support: works on https/localhost; file:// often blocks it.
     const canTryGPS = window.isSecureContext && navigator.geolocation;
@@ -273,7 +312,7 @@ function initScene(sources) {
         (err) => {
           usingGPS = false;
           setStatus(
-            "GPS not available / permission denied. Click on the map to simulate position. (" +
+            "GPS not available / permission denied. Tap the map to simulate position. (" +
               (err && err.message ? err.message : err) +
               ")"
           );
@@ -282,7 +321,7 @@ function initScene(sources) {
       );
     } else {
       usingGPS = false;
-      setStatus("GPS is usually blocked in file://. Click on the map to simulate position.");
+      setStatus("GPS is usually blocked in file://. Tap the map to simulate position.");
     }
 
     document.getElementById("startAudio").disabled = true;
