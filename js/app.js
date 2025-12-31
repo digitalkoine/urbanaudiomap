@@ -224,18 +224,42 @@ function initScene(sources) {
   async function startAudio() {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    for (const s of sources) {
-      s.audioEl = new Audio(s.audioUri);
-      s.audioEl.loop = true;
-
-      const srcNode = audioCtx.createMediaElementSource(s.audioEl);
-      s.gainNode = audioCtx.createGain();
-      s.gainNode.gain.value = 0;
-
-      srcNode.connect(s.gainNode).connect(audioCtx.destination);
-      await s.audioEl.play();
+    // On mobile (especially iOS), ensure the context is running inside the click gesture.
+    if (audioCtx.state === "suspended") {
+      await audioCtx.resume();
     }
 
+    setStatus("Loading audio… (first time only)");
+
+    // iOS Safari can block starting multiple <audio>.play() calls in one gesture.
+    // To be mobile-safe, we decode each embedded data: URI into an AudioBuffer and use BufferSourceNodes.
+    for (const s of sources) {
+      // Gain per source (for distance-based volume)
+      s.gainNode = audioCtx.createGain();
+      s.gainNode.gain.value = 0;
+      s.gainNode.connect(audioCtx.destination);
+
+      const resp = await fetch(s.audioUri);
+      const arrayBuf = await resp.arrayBuffer();
+
+      // decodeAudioData API differs slightly across browsers (promise vs callback)
+      const audioBuf = await new Promise((resolve, reject) => {
+        const p = audioCtx.decodeAudioData(arrayBuf, resolve, reject);
+        if (p && typeof p.then === "function") p.then(resolve).catch(reject);
+      });
+
+      s.buffer = audioBuf;
+
+      const src = audioCtx.createBufferSource();
+      src.buffer = audioBuf;
+      src.loop = true;
+      src.connect(s.gainNode);
+      src.start(0);
+
+      s.sourceNode = src;
+    }
+
+    // GPS support: works on https/localhost; file:// often blocks it.
     const canTryGPS = window.isSecureContext && navigator.geolocation;
 
     if (canTryGPS) {
