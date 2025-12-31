@@ -245,11 +245,29 @@ function initScene(mode, sources) {
   }
 
   async function startAudio() {
+    // Create context inside the click gesture (mobile requirement)
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Ensure the context is running
     if (audioCtx.state === "suspended") await audioCtx.resume();
 
+    // iOS unlock trick: start a tiny silent buffer immediately (before any async work).
+    // This prevents the common "audio stays muted" issue on mobile Safari/Chrome iOS.
+    try {
+      const unlockBuf = audioCtx.createBuffer(1, 1, 22050);
+      const unlockSrc = audioCtx.createBufferSource();
+      unlockSrc.buffer = unlockBuf;
+      unlockSrc.connect(audioCtx.destination);
+      unlockSrc.start(0);
+    } catch (e) {
+      // ignore
+    }
+
     document.getElementById("startAudio").disabled = true;
-    setStatus("Loading audio… (first time only)");
+    setStatus(
+      "Loading audio… (first time only)\n" +
+      "If you're on iPhone: Silent mode must be OFF and media volume up."
+    );
 
     for (const s of sources) {
       s.gainNode = audioCtx.createGain();
@@ -258,13 +276,11 @@ function initScene(mode, sources) {
 
       let arrayBuf;
       if (mode === "fetch") {
-        // Use external audio file
         const audioUrl = new URL(s.audio, window.location.href).toString();
         const resp = await fetch(audioUrl, { cache: "no-store" });
         if (!resp.ok) throw new Error(`Audio fetch failed for ${s.label} (${resp.status})`);
         arrayBuf = await resp.arrayBuffer();
       } else {
-        // Embedded LIGHT audio (data URI)
         arrayBuf = dataUriToArrayBuffer(s.audioUri);
       }
 
@@ -274,15 +290,20 @@ function initScene(mode, sources) {
       src.buffer = audioBuf;
       src.loop = true;
       src.connect(s.gainNode);
-      src.start(0);
+
+      // Start slightly in the future (more reliable on mobile)
+      src.start(audioCtx.currentTime + 0.05);
 
       s.sourceNode = src;
     }
 
+    // Set initial volumes at the current center (so you hear something right after Start)
+    updateForUserPos(map.getCenter(), "INIT");
+
     const canTryGPS = window.isSecureContext && navigator.geolocation;
     if (canTryGPS) {
       usingGPS = true;
-      setStatus("Audio started. GPS enabled: waiting for position…");
+      setStatus("Audio started. GPS enabled: waiting for position… (or tap/click map to simulate)");
       navigator.geolocation.watchPosition(
         (pos) => {
           const userPos = L.latLng(pos.coords.latitude, pos.coords.longitude);
@@ -290,8 +311,11 @@ function initScene(mode, sources) {
         },
         (err) => {
           usingGPS = false;
-          setStatus("GPS not available / permission denied. Tap/click map to simulate position. (" +
-            (err && err.message ? err.message : err) + ")");
+          setStatus(
+            "GPS not available / permission denied.\nTap/click map to simulate position.\n(" +
+              (err && err.message ? err.message : err) +
+              ")"
+          );
         },
         { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
       );
